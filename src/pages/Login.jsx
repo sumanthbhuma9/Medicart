@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { authAPI } from '../services/api';
 
 function Login({ login }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
@@ -16,47 +18,28 @@ function Login({ login }) {
       return;
     }
 
-    // Mock Authentication Logic
-    // We check credentials locally for demonstration:
-    let userRole = 'customer';
-    let userName = 'Rahul Kumar';
-    let userPhone = '8328579509';
+    try {
+      setLoading(true);
+      const response = await authAPI.login(email, password);
+      const { user, token } = response.data;
 
-    if (email.toLowerCase() === 'admin@sai.com') {
-      if (password === 'admin123') {
-        userRole = 'admin';
-        userName = 'Admin Owner';
-      } else {
-        setError('Incorrect password for Admin.');
-        return;
+      // Pass user and token to parent state/storage
+      if (login) {
+        login(user, token);
       }
-    } else if (email.toLowerCase() === 'customer@sai.com') {
-      if (password === 'customer123') {
-        userRole = 'customer';
-        userName = 'Sai Kumar';
+
+      // Redirect based on role
+      if (user.role === 'admin') {
+        navigate('/admin/medicines');
       } else {
-        setError('Incorrect password for Customer.');
-        return;
+        navigate('/user/dashboard');
       }
-    } else {
-      // General signup fallback simulation
-      userRole = 'customer';
-      userName = email.split('@')[0];
-    }
-
-    // Call login state setting function
-    login({
-      name: userName,
-      email: email,
-      phone: userPhone,
-      role: userRole
-    });
-
-    // Redirect based on role
-    if (userRole === 'admin') {
-      navigate('/admin/medicines');
-    } else {
-      navigate('/user/dashboard');
+    } catch (err) {
+      console.error('Login error:', err);
+      const msg = err.response?.data?.message || 'Invalid email or password. Please try again.';
+      setError(msg);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -64,15 +47,6 @@ function Login({ login }) {
     <div>
       <div className="form-container">
         <h2 className="form-title">Account Login</h2>
-
-        {/* Demo instructions */}
-        <div className="alert alert-info" style={{ fontSize: '0.85rem', marginBottom: '1rem' }}>
-          <strong>🔑 Testing Credentials:</strong>
-          <ul style={{ paddingLeft: '1.2rem', marginTop: '0.25rem' }}>
-            <li><strong>Admin:</strong> admin@sai.com (pass: admin123)</li>
-            <li><strong>Customer:</strong> customer@sai.com (pass: customer123)</li>
-          </ul>
-        </div>
 
         {error && (
           <div className="alert alert-danger" style={{ fontSize: '0.85rem', padding: '0.5rem 1rem' }}>
@@ -108,8 +82,8 @@ function Login({ login }) {
           </div>
 
           <div className="form-actions">
-            <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>
-              Log In
+            <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={loading}>
+              {loading ? 'Logging in...' : 'Log In'}
             </button>
           </div>
         </form>
@@ -119,7 +93,7 @@ function Login({ login }) {
         </p>
 
         <div style={{ textAlign: 'center', fontSize: '0.75rem', marginTop: '1rem', color: 'var(--text-muted)' }}>
-          🔒 Note: Session security will be handled later via backend JWT.
+          🔒 Session secured with JWT authentication and bcrypt encryption.
         </div>
       </div>
     </div>

@@ -19,7 +19,7 @@ function Orders({ orders, user }) {
 
   // Filter orders placed by this specific user
   const userOrders = orders.filter(
-    (order) => order.customerEmail === user.email
+    (order) => order.customerEmail?.toLowerCase() === user.email?.toLowerCase()
   );
 
   return (
@@ -48,12 +48,12 @@ function Orders({ orders, user }) {
       ) : (
         <div className="orders-list">
           {userOrders.map((order) => (
-            <div className="order-card" key={order.id}>
+            <div className="order-card" key={order.id || order._id}>
               {/* Header Info */}
               <div className="order-header">
                 <div>
                   <span style={{ color: 'var(--text-muted)' }}>Order ID: </span>
-                  <span style={{ fontFamily: 'monospace', color: 'var(--text)' }}>#{order.id}</span>
+                  <span style={{ fontFamily: 'monospace', color: 'var(--text)' }}>#{order.id || order.numId || order._id}</span>
                 </div>
                 <div>
                   <span style={{ color: 'var(--text-muted)' }}>Date: </span>
@@ -66,9 +66,9 @@ function Orders({ orders, user }) {
                 <div>
                   <h4 style={{ marginBottom: '0.25rem' }}>Items Ordered:</h4>
                   <ul style={{ paddingLeft: '1.25rem', fontSize: '0.9rem', color: 'var(--text)' }}>
-                    {order.items.map((item, idx) => (
+                    {order.items?.map((item, idx) => (
                       <li key={idx}>
-                        {item.product.name} x {item.quantity} (₹{item.product.price.toFixed(2)} each)
+                        {item.product?.name || 'Medicine'} x {item.quantity} (₹{(item.product?.price || 0).toFixed(2)} each)
                       </li>
                     ))}
                   </ul>
@@ -90,7 +90,7 @@ function Orders({ orders, user }) {
                   <div>
                     <span style={{ color: 'var(--text-muted)' }}>Total Paid: </span>
                     <strong style={{ fontSize: '1.15rem', color: 'var(--primary)' }}>
-                      ₹{order.total.toFixed(2)}
+                      ₹{(order.total || 0).toFixed(2)}
                     </strong>
                   </div>
                 </div>

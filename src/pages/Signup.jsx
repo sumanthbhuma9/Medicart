@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { authAPI } from '../services/api';
 
 function Signup({ login }) {
   const [name, setName] = useState('');
@@ -8,9 +9,10 @@ function Signup({ login }) {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
@@ -30,17 +32,31 @@ function Signup({ login }) {
       return;
     }
 
-    // Mock Signup success. In the real app, this will make a POST request to register the user in the backend.
-    // Here we auto-log the user in as customer:
-    login({
-      name: name,
-      email: email,
-      phone: phone,
-      role: 'customer'
-    });
+    try {
+      setLoading(true);
+      const response = await authAPI.signup({
+        name,
+        email,
+        phone,
+        password,
+        role: 'customer'
+      });
 
-    alert('Registration successful! Welcome to Sri Satya Sai Medicals.');
-    navigate('/user/dashboard');
+      const { user, token } = response.data;
+
+      if (login) {
+        login(user, token);
+      }
+
+      alert('Registration successful! Welcome to Sri Satya Sai Medicals.');
+      navigate('/user/dashboard');
+    } catch (err) {
+      console.error('Signup error:', err);
+      const msg = err.response?.data?.message || 'Registration failed. Please try again.';
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -121,8 +137,8 @@ function Signup({ login }) {
           </div>
 
           <div className="form-actions">
-            <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>
-              Sign Up
+            <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={loading}>
+              {loading ? 'Creating Account...' : 'Sign Up'}
             </button>
           </div>
         </form>

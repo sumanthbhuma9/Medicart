@@ -6,8 +6,8 @@ function ProductDetails({ products, addToCart }) {
   const navigate = useNavigate();
   const [quantity, setQuantity] = useState(1);
 
-  // Find product by matching the URL ID parameter
-  const product = products.find((p) => p.id === parseInt(id));
+  // Find product by matching the URL ID parameter (supports numeric id or ObjectId string)
+  const product = products.find((p) => String(p.id) === String(id) || String(p._id) === String(id));
 
   // If medicine doesn't exist
   if (!product) {

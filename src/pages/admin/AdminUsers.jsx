@@ -41,7 +41,6 @@ function AdminUsers({ user, usersList, addUser, deleteUser }) {
 
     // Add user to state
     addUser({ name, email, phone, role });
-    alert('User added successfully!');
 
     // Reset Form
     setName('');

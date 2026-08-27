@@ -44,9 +44,10 @@ function Cart({ cart, updateCartQuantity, removeFromCart, checkout, user }) {
         {/* Cart Items List */}
         <div className="cart-items">
           {cart.map((item) => {
+            const prodId = item.product.id || item.product._id;
             const productTotal = item.product.price * item.quantity;
             return (
-              <div className="cart-item" key={item.product.id}>
+              <div className="cart-item" key={prodId}>
                 {/* Product Name & Category */}
                 <div className="cart-item-info">
                   <h4 style={{ margin: 0 }}>{item.product.name}</h4>
@@ -63,7 +64,7 @@ function Cart({ cart, updateCartQuantity, removeFromCart, checkout, user }) {
                 {/* Quantity Controls */}
                 <div className="quantity-selector">
                   <button
-                    onClick={() => updateCartQuantity(item.product.id, item.quantity - 1)}
+                    onClick={() => updateCartQuantity(prodId, item.quantity - 1)}
                     className="quantity-btn"
                     style={{ padding: '0.1rem 0.5rem', fontSize: '1rem' }}
                   >
@@ -73,7 +74,7 @@ function Cart({ cart, updateCartQuantity, removeFromCart, checkout, user }) {
                     {item.quantity}
                   </span>
                   <button
-                    onClick={() => updateCartQuantity(item.product.id, item.quantity + 1)}
+                    onClick={() => updateCartQuantity(prodId, item.quantity + 1)}
                     className="quantity-btn"
                     disabled={item.quantity >= item.product.stock}
                     style={{ padding: '0.1rem 0.5rem', fontSize: '1rem' }}
@@ -89,7 +90,7 @@ function Cart({ cart, updateCartQuantity, removeFromCart, checkout, user }) {
 
                 {/* Remove button */}
                 <button
-                  onClick={() => removeFromCart(item.product.id)}
+                  onClick={() => removeFromCart(prodId)}
                   className="btn btn-danger btn-sm"
                   title="Remove item"
                 >

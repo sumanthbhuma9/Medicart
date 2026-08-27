@@ -14,7 +14,7 @@ function Footer() {
             📞 <strong>Phone:</strong> 8328579509
           </p>
           <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.75rem' }}>
-            © {new Date().getFullYear()} Sri Satya Sai Medicals. All rights reserved. (Frontend Demonstration Model)
+            © {new Date().getFullYear()} Sri Satya Sai Medicals. All rights reserved.
           </p>
         </div>
       </div>

@@ -66,21 +66,21 @@ function AdminOrders({ user, orders, updateOrderStatus }) {
             </thead>
             <tbody>
               {orders.map((order) => (
-                <tr key={order.id}>
-                  <td style={{ fontFamily: 'monospace', fontWeight: 'bold' }}>#{order.id}</td>
+                <tr key={order.id || order._id}>
+                  <td style={{ fontFamily: 'monospace', fontWeight: 'bold' }}>#{order.id || order.numId || order._id}</td>
                   <td>{order.customerEmail}</td>
                   <td>{order.date}</td>
                   <td>
                     <ul style={{ paddingLeft: '1.25rem', fontSize: '0.8rem', margin: 0 }}>
                       {order.items.map((item, index) => (
                         <li key={index}>
-                          {item.product.name} (x{item.quantity})
+                          {item.product?.name || 'Medicine'} (x{item.quantity})
                         </li>
                       ))}
                     </ul>
                   </td>
                   <td style={{ fontWeight: '600', color: 'var(--primary)' }}>
-                    ₹{order.total.toFixed(2)}
+                    ₹{(order.total || 0).toFixed(2)}
                   </td>
                   <td>
                     <span className={`badge ${
@@ -95,7 +95,7 @@ function AdminOrders({ user, orders, updateOrderStatus }) {
                     <div style={{ display: 'flex', justifyContent: 'center' }}>
                       {order.status !== 'Delivered' ? (
                         <button
-                          onClick={() => handleUpdateStatus(order.id, order.status)}
+                          onClick={() => handleUpdateStatus(order.id || order._id, order.status)}
                           className="btn btn-secondary btn-sm"
                         >
                           Mark as {order.status === 'Pending' ? 'Shipped' : 'Delivered'}

@@ -40,7 +40,7 @@ function ProductCard({ product, addToCart }) {
         {/* Card Actions */}
         <div className="card-actions">
           <Link
-            to={`/products/${product.id}`}
+            to={`/products/${product.id || product._id}`}
             className="btn btn-secondary"
             style={{ flexGrow: 1, textAlign: 'center' }}
           >

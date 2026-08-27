@@ -44,7 +44,7 @@ function AdminMedicines({ user, products, addProduct, editProduct, deleteProduct
   // Open Form to Edit existing Medicine
   const handleEditClick = (product) => {
     setIsEditing(true);
-    setEditingId(product.id);
+    setEditingId(product.id || product._id);
     setName(product.name);
     setCategory(product.category);
     setPrice(product.price);
@@ -93,7 +93,6 @@ function AdminMedicines({ user, products, addProduct, editProduct, deleteProduct
         description,
         image: imgToSave
       });
-      alert('Medicine updated successfully!');
     } else {
       addProduct({
         name,
@@ -103,7 +102,6 @@ function AdminMedicines({ user, products, addProduct, editProduct, deleteProduct
         description,
         image: imgToSave
       });
-      alert('New medicine added successfully!');
     }
 
     // Reset and hide form
@@ -253,7 +251,7 @@ function AdminMedicines({ user, products, addProduct, editProduct, deleteProduct
           </thead>
           <tbody>
             {products.map((product) => (
-              <tr key={product.id}>
+              <tr key={product.id || product._id}>
                 <td>
                   <img
                     src={product.image}
@@ -284,7 +282,7 @@ function AdminMedicines({ user, products, addProduct, editProduct, deleteProduct
                       Edit
                     </button>
                     <button
-                      onClick={() => handleDeleteClick(product.id)}
+                      onClick={() => handleDeleteClick(product.id || product._id)}
                       className="btn btn-danger btn-sm"
                     >
                       Delete
