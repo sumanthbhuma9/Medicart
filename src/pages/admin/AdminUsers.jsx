@@ -6,6 +6,7 @@ function AdminUsers({ user, usersList, addUser, deleteUser }) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
   const [role, setRole] = useState('customer');
 
   // Simple Admin Role Verification
@@ -34,18 +35,24 @@ function AdminUsers({ user, usersList, addUser, deleteUser }) {
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    if (!name || !email || !phone) {
+    if (!name || !email || !phone || !password) {
       alert('Please fill in all fields.');
       return;
     }
 
-    // Add user to state
-    addUser({ name, email, phone, role });
+    if (password.length < 6) {
+      alert('Password must be at least 6 characters long.');
+      return;
+    }
+
+    // Add user to database / state
+    addUser({ name, email, phone, password, role });
 
     // Reset Form
     setName('');
     setEmail('');
     setPhone('');
+    setPassword('');
     setRole('customer');
     setShowForm(false);
   };
@@ -101,6 +108,19 @@ function AdminUsers({ user, usersList, addUser, deleteUser }) {
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 className="form-input"
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Password</label>
+              <input
+                type="password"
+                placeholder="Enter password (min 6 characters)"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="form-input"
+                minLength={6}
                 required
               />
             </div>

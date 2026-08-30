@@ -48,9 +48,11 @@ router.post('/', protect, adminOnly, async (req, res) => {
   try {
     const { name, email, phone, password, role } = req.body;
 
-    if (!name || !email || !password) {
-      return res.status(400).json({ message: 'Name, email and password are required' });
+    if (!name || !email) {
+      return res.status(400).json({ message: 'Name and email are required' });
     }
+
+    const userPassword = (password && password.trim().length >= 6) ? password.trim() : 'medicart123';
 
     if (mongoose.connection.readyState === 1) {
       const exists = await User.findOne({ email: email.toLowerCase() });
@@ -62,7 +64,7 @@ router.post('/', protect, adminOnly, async (req, res) => {
         name,
         email: email.toLowerCase(),
         phone: phone || '8328579509',
-        password,
+        password: userPassword,
         role: role || 'customer',
       });
 
@@ -81,7 +83,7 @@ router.post('/', protect, adminOnly, async (req, res) => {
       return res.status(400).json({ message: 'User already exists' });
     }
 
-    const newUser = await memoryStore.createUser({ name, email, phone, password, role });
+    const newUser = await memoryStore.createUser({ name, email, phone, password: userPassword, role });
     const { password: _, ...safeUser } = newUser;
     res.status(201).json(safeUser);
   } catch (error) {
