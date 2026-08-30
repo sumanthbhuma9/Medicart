@@ -10,6 +10,7 @@
     "server:dev": "node --watch server/server.js",
     "client": "vite",
     "build": "vite build",
+    "vercel-build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview"
   },
