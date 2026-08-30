@@ -1,7 +1,9 @@
 import express from 'express';
 import jwt from 'jsonwebtoken';
+import mongoose from 'mongoose';
 import User from '../models/User.js';
 import { protect } from '../middleware/authMiddleware.js';
+import { memoryStore } from '../store/memoryStore.js';
 
 const router = express.Router();
 
@@ -22,30 +24,53 @@ router.post('/signup', async (req, res) => {
       return res.status(400).json({ message: 'Please provide all required fields' });
     }
 
-    const userExists = await User.findOne({ email: email.toLowerCase() });
-    if (userExists) {
+    if (mongoose.connection.readyState === 1) {
+      const userExists = await User.findOne({ email: email.toLowerCase() });
+      if (userExists) {
+        return res.status(400).json({ message: 'User with this email already exists' });
+      }
+
+      const user = await User.create({
+        name,
+        email: email.toLowerCase(),
+        phone: phone || '8328579509',
+        password,
+        role: role === 'admin' ? 'admin' : 'customer',
+      });
+
+      const token = generateToken(user._id);
+
+      return res.status(201).json({
+        success: true,
+        token,
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          phone: user.phone,
+          role: user.role,
+        },
+      });
+    }
+
+    // In-memory fallback
+    const memExists = memoryStore.findUserByEmail(email);
+    if (memExists) {
       return res.status(400).json({ message: 'User with this email already exists' });
     }
 
-    const user = await User.create({
-      name,
-      email: email.toLowerCase(),
-      phone: phone || '8328579509',
-      password,
-      role: role === 'admin' ? 'admin' : 'customer',
-    });
+    const newUser = await memoryStore.createUser({ name, email, phone, password, role });
+    const token = generateToken(newUser._id);
 
-    const token = generateToken(user._id);
-
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
       token,
       user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-        role: user.role,
+        id: newUser._id,
+        name: newUser.name,
+        email: newUser.email,
+        phone: newUser.phone,
+        role: newUser.role,
       },
     });
   } catch (error) {
@@ -65,23 +90,43 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ message: 'Please enter email and password' });
     }
 
-    const user = await User.findOne({ email: email.toLowerCase() });
-    if (user && (await user.matchPassword(password))) {
-      const token = generateToken(user._id);
+    if (mongoose.connection.readyState === 1) {
+      const user = await User.findOne({ email: email.toLowerCase() });
+      if (user && (await user.matchPassword(password))) {
+        const token = generateToken(user._id);
+        return res.json({
+          success: true,
+          token,
+          user: {
+            id: user._id,
+            name: user.name,
+            email: user.email,
+            phone: user.phone,
+            role: user.role,
+          },
+        });
+      }
+      return res.status(401).json({ message: 'Invalid email or password' });
+    }
+
+    // In-memory fallback
+    const memUser = memoryStore.findUserByEmail(email);
+    if (memUser && (await memoryStore.verifyUserPassword(memUser, password))) {
+      const token = generateToken(memUser._id);
       return res.json({
         success: true,
         token,
         user: {
-          id: user._id,
-          name: user.name,
-          email: user.email,
-          phone: user.phone,
-          role: user.role,
+          id: memUser._id,
+          name: memUser.name,
+          email: memUser.email,
+          phone: memUser.phone,
+          role: memUser.role,
         },
       });
-    } else {
-      return res.status(401).json({ message: 'Invalid email or password' });
     }
+
+    return res.status(401).json({ message: 'Invalid email or password' });
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ message: error.message || 'Server error during login' });
@@ -96,7 +141,7 @@ router.get('/me', protect, async (req, res) => {
     res.json({
       success: true,
       user: {
-        id: req.user._id,
+        id: req.user._id || req.user.id,
         name: req.user.name,
         email: req.user.email,
         phone: req.user.phone,

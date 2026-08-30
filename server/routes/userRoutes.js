@@ -1,42 +1,13 @@
 import express from 'express';
+import mongoose from 'mongoose';
 import User from '../models/User.js';
 import { protect, adminOnly } from '../middleware/authMiddleware.js';
+import { memoryStore, INITIAL_USERS } from '../store/memoryStore.js';
 
 const router = express.Router();
 
-// Initial sample users for seeding
-const INITIAL_USERS = [
-  {
-    name: 'Admin Owner',
-    email: 'admin@sai.com',
-    password: 'admin123',
-    phone: '8328579509',
-    role: 'admin',
-  },
-  {
-    name: 'Sai Kumar',
-    email: 'customer@sai.com',
-    password: 'customer123',
-    phone: '8328579509',
-    role: 'customer',
-  },
-  {
-    name: 'Vijay Anand',
-    email: 'vijay@sai.com',
-    password: 'vijay123',
-    phone: '9988776655',
-    role: 'customer',
-  },
-  {
-    name: 'Deepa Raj',
-    email: 'deepa@sai.com',
-    password: 'deepa123',
-    phone: '8877665544',
-    role: 'customer',
-  },
-];
-
 export const seedUsersIfEmpty = async () => {
+  if (mongoose.connection.readyState !== 1) return;
   try {
     const count = await User.countDocuments();
     if (count === 0) {
@@ -56,8 +27,14 @@ export const seedUsersIfEmpty = async () => {
 // @access  Private / Admin
 router.get('/', protect, adminOnly, async (req, res) => {
   try {
-    await seedUsersIfEmpty();
-    const users = await User.find({}).select('-password').sort({ createdAt: -1 });
+    if (mongoose.connection.readyState === 1) {
+      await seedUsersIfEmpty();
+      const users = await User.find({}).select('-password').sort({ createdAt: -1 });
+      return res.json(users);
+    }
+
+    // In-memory fallback
+    const users = memoryStore.getAllUsers();
     res.json(users);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -65,65 +42,80 @@ router.get('/', protect, adminOnly, async (req, res) => {
 });
 
 // @route   POST /api/users
-// @desc    Add user by admin
+// @desc    Admin manually create a user
 // @access  Private / Admin
 router.post('/', protect, adminOnly, async (req, res) => {
   try {
-    const { name, email, phone, role, password } = req.body;
+    const { name, email, phone, password, role } = req.body;
 
-    if (!name || !email) {
-      return res.status(400).json({ message: 'Name and email are required' });
+    if (!name || !email || !password) {
+      return res.status(400).json({ message: 'Name, email and password are required' });
     }
 
-    const existingUser = await User.findOne({ email: email.toLowerCase() });
-    if (existingUser) {
+    if (mongoose.connection.readyState === 1) {
+      const exists = await User.findOne({ email: email.toLowerCase() });
+      if (exists) {
+        return res.status(400).json({ message: 'User already exists' });
+      }
+
+      const user = await User.create({
+        name,
+        email: email.toLowerCase(),
+        phone: phone || '8328579509',
+        password,
+        role: role || 'customer',
+      });
+
+      return res.status(201).json({
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+      });
+    }
+
+    // In-memory fallback
+    const exists = memoryStore.findUserByEmail(email);
+    if (exists) {
       return res.status(400).json({ message: 'User already exists' });
     }
 
-    const user = await User.create({
-      name,
-      email: email.toLowerCase(),
-      phone: phone || '8328579509',
-      role: role || 'customer',
-      password: password || 'default123',
-    });
-
-    res.status(201).json({
-      id: user._id,
-      name: user.name,
-      email: user.email,
-      phone: user.phone,
-      role: user.role,
-    });
+    const newUser = await memoryStore.createUser({ name, email, phone, password, role });
+    const { password: _, ...safeUser } = newUser;
+    res.status(201).json(safeUser);
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
 });
 
 // @route   DELETE /api/users/:email
-// @desc    Delete user by email or ID
+// @desc    Admin delete a user by email
 // @access  Private / Admin
 router.delete('/:email', protect, adminOnly, async (req, res) => {
   try {
-    const target = req.params.email;
+    const email = decodeURIComponent(req.params.email);
 
-    if (target.toLowerCase() === req.user.email.toLowerCase()) {
-      return res.status(400).json({ message: 'You cannot delete your own admin account' });
+    // Prevent deleting main admin
+    if (email.toLowerCase() === 'admin@sai.com') {
+      return res.status(400).json({ message: 'Cannot delete the primary administrator' });
     }
 
-    let user;
-    if (target.match(/^[0-9a-fA-F]{24}$/)) {
-      user = await User.findById(target);
-    }
-    if (!user) {
-      user = await User.findOne({ email: target.toLowerCase() });
+    if (mongoose.connection.readyState === 1) {
+      const user = await User.findOne({ email: email.toLowerCase() });
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      await user.deleteOne();
+      return res.json({ message: 'User removed successfully' });
     }
 
-    if (!user) {
+    // In-memory fallback
+    const deleted = memoryStore.deleteUserByEmail(email);
+    if (!deleted) {
       return res.status(404).json({ message: 'User not found' });
     }
-
-    await user.deleteOne();
     res.json({ message: 'User removed successfully' });
   } catch (error) {
     res.status(500).json({ message: error.message });

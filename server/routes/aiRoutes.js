@@ -1,5 +1,7 @@
 import express from 'express';
+import mongoose from 'mongoose';
 import Medicine from '../models/Medicine.js';
+import { memoryStore } from '../store/memoryStore.js';
 
 const router = express.Router();
 
@@ -96,16 +98,29 @@ router.post('/analyze-symptoms', async (req, res) => {
       };
     }
 
-    // Search MongoDB Atlas for matching medicines using regex search terms
-    const regexQueries = bestMatch.searchTerms.map(term => new RegExp(term, 'i'));
-    
-    const matchedMedicines = await Medicine.find({
-      $or: [
-        { name: { $in: regexQueries } },
-        { category: { $in: regexQueries } },
-        { description: { $in: regexQueries } }
-      ]
-    }).limit(6);
+    let matchedMedicines = [];
+
+    if (mongoose.connection.readyState === 1) {
+      const regexQueries = bestMatch.searchTerms.map(term => new RegExp(term, 'i'));
+      matchedMedicines = await Medicine.find({
+        $or: [
+          { name: { $in: regexQueries } },
+          { category: { $in: regexQueries } },
+          { description: { $in: regexQueries } }
+        ]
+      }).limit(6);
+    } else {
+      // In-memory matching
+      const all = memoryStore.getAllProducts();
+      matchedMedicines = all.filter(p => {
+        return bestMatch.searchTerms.some(term => {
+          const t = term.toLowerCase();
+          return (p.name && p.name.toLowerCase().includes(t)) ||
+                 (p.category && p.category.toLowerCase().includes(t)) ||
+                 (p.description && p.description.toLowerCase().includes(t));
+        });
+      }).slice(0, 6);
+    }
 
     res.json({
       success: true,

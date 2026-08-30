@@ -1,5 +1,7 @@
 import jwt from 'jsonwebtoken';
+import mongoose from 'mongoose';
 import User from '../models/User.js';
+import { memoryStore } from '../store/memoryStore.js';
 
 export const protect = async (req, res, next) => {
   let token;
@@ -12,7 +14,16 @@ export const protect = async (req, res, next) => {
       token = req.headers.authorization.split(' ')[1];
       const decoded = jwt.verify(token, process.env.JWT_SECRET || 'medicart_jwt_secret_key_2026_super_secure');
 
-      req.user = await User.findById(decoded.id).select('-password');
+      if (mongoose.connection.readyState === 1) {
+        req.user = await User.findById(decoded.id).select('-password');
+      } else {
+        const memUser = memoryStore.findUserById(decoded.id);
+        if (memUser) {
+          const { password, ...safeUser } = memUser;
+          req.user = safeUser;
+        }
+      }
+
       if (!req.user) {
         return res.status(401).json({ message: 'User account not found' });
       }
